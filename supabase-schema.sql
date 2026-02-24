@@ -132,6 +132,29 @@ create table public.study_sessions (
 alter table public.study_sessions enable row level security;
 create policy "Users CRUD own sessions" on public.study_sessions for all using (auth.uid() = user_id);
 
+-- Files (uploaded PDFs, docs, images within folders)
+create table public.files (
+  id uuid default uuid_generate_v4() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  folder_id uuid references public.folders(id) on delete cascade not null,
+  name text not null,
+  original_name text not null,
+  file_type text not null, -- 'pdf', 'docx', 'txt', 'image', 'other'
+  mime_type text not null,
+  size_bytes bigint default 0,
+  storage_path text not null, -- Supabase Storage path
+  extracted_text text, -- Text extracted from PDF/doc
+  summary text, -- AI-generated summary
+  status text default 'uploaded' check (status in ('uploaded', 'processing', 'processed', 'error')),
+  flashcards_generated boolean default false,
+  error_message text,
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null
+);
+
+alter table public.files enable row level security;
+create policy "Users CRUD own files" on public.files for all using (auth.uid() = user_id);
+
 -- Indexes for performance
 create index idx_documents_user on public.documents(user_id);
 create index idx_documents_folder on public.documents(folder_id);
@@ -140,6 +163,8 @@ create index idx_flashcards_deck on public.flashcards(deck_id);
 create index idx_flashcards_next_review on public.flashcards(next_review);
 create index idx_folders_user on public.folders(user_id);
 create index idx_folders_parent on public.folders(parent_id);
+create index idx_files_user on public.files(user_id);
+create index idx_files_folder on public.files(folder_id);
 
 -- Updated_at trigger
 create or replace function update_updated_at()
@@ -156,3 +181,4 @@ create trigger update_documents_updated_at before update on public.documents for
 create trigger update_decks_updated_at before update on public.decks for each row execute function update_updated_at();
 create trigger update_flashcards_updated_at before update on public.flashcards for each row execute function update_updated_at();
 create trigger update_mindmaps_updated_at before update on public.mindmaps for each row execute function update_updated_at();
+create trigger update_files_updated_at before update on public.files for each row execute function update_updated_at();

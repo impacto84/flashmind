@@ -66,6 +66,28 @@ export interface Deck {
   updated_at: string;
 }
 
+export type FileStatus = 'uploaded' | 'processing' | 'processed' | 'error';
+export type FileType = 'pdf' | 'docx' | 'txt' | 'image' | 'other';
+
+export interface FileRecord {
+  id: string;
+  user_id: string;
+  folder_id: string;
+  name: string;
+  original_name: string;
+  file_type: FileType;
+  mime_type: string;
+  size_bytes: number;
+  storage_path: string;
+  extracted_text: string | null;
+  summary: string | null;
+  status: FileStatus;
+  flashcards_generated: boolean;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MindMap {
   id: string;
   user_id: string;

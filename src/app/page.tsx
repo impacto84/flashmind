@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   FileText, BrainCircuit, Layers, Network, Play, Plus, Clock,
-  Sparkles, Flame, Trophy, Target, TrendingUp, Calendar
+  Sparkles, Flame, Trophy, Target, TrendingUp, Calendar, FolderOpen, Upload
 } from "lucide-react";
 import MainLayout from "@/components/layout/MainLayout";
 import { createSupabaseBrowserClient } from '@/lib/supabase';
@@ -29,6 +29,8 @@ interface DashboardStats {
   dueCards: number;
   decks: number;
   mindmaps: number;
+  folders: number;
+  files: number;
   streak: number;
   totalReviewed: number;
   weeklyData: { day: string; cards: number; correct: number }[];
@@ -38,7 +40,7 @@ export default function Home() {
   const { user, loading: userLoading } = useUser();
   const [stats, setStats] = useState<DashboardStats>({
     documents: 0, flashcards: 0, dueCards: 0, decks: 0, mindmaps: 0,
-    streak: 0, totalReviewed: 0, weeklyData: [],
+    folders: 0, files: 0, streak: 0, totalReviewed: 0, weeklyData: [],
   });
   const [recentDocs, setRecentDocs] = useState<{ id: string; title: string; updated_at: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,12 +49,14 @@ export default function Home() {
     if (!user) return;
 
     const fetchStats = async () => {
-      const [docs, cards, dueCards, decksRes, maps] = await Promise.all([
+      const [docs, cards, dueCards, decksRes, maps, foldersRes, filesRes] = await Promise.all([
         supabase.from('documents').select('id', { count: 'exact', head: true }),
         supabase.from('flashcards').select('id', { count: 'exact', head: true }),
         supabase.from('flashcards').select('id', { count: 'exact', head: true }).lte('next_review', new Date().toISOString()),
         supabase.from('decks').select('id', { count: 'exact', head: true }),
         supabase.from('mindmaps').select('id', { count: 'exact', head: true }),
+        supabase.from('folders').select('id', { count: 'exact', head: true }),
+        supabase.from('files').select('id', { count: 'exact', head: true }),
       ]);
 
       // Study sessions for streak & chart
@@ -101,6 +105,8 @@ export default function Home() {
         dueCards: dueCards.count || 0,
         decks: decksRes.count || 0,
         mindmaps: maps.count || 0,
+        folders: foldersRes.count || 0,
+        files: filesRes.count || 0,
         streak,
         totalReviewed,
         weeklyData,
@@ -196,7 +202,7 @@ export default function Home() {
         )}
 
         {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
           <Link href="/documents">
             <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -233,6 +239,20 @@ export default function Home() {
                 <div className="text-2xl font-bold">{stats.dueCards}</div>
                 <p className="text-xs text-muted-foreground">
                   {stats.dueCards > 0 ? 'Cards pendentes' : 'Tudo em dia!'}
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/folders">
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pastas</CardTitle>
+                <FolderOpen className="h-4 w-4 text-amber-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.folders}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.files} arquivo{stats.files !== 1 ? 's' : ''}
                 </p>
               </CardContent>
             </Card>
@@ -372,7 +392,20 @@ export default function Home() {
         </div>
 
         {/* Quick Start */}
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 md:grid-cols-4">
+          <Link href="/folders" className="block">
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
+              <CardContent className="flex items-center gap-3 p-4">
+                <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                  <Upload className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Upload de arquivos</p>
+                  <p className="text-xs text-muted-foreground">PDFs e docs para gerar flashcards</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
           <Link href="/documents" className="block">
             <Card className="hover:bg-accent/50 transition-colors cursor-pointer h-full">
               <CardContent className="flex items-center gap-3 p-4">

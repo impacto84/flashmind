@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createSupabaseBrowserClient } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
-import type { Document, Folder, Deck, Flashcard, MindMap } from '@/types/database';
+import type { Document, Folder, Deck, Flashcard, MindMap, FileRecord } from '@/types/database';
 
 const supabase = createSupabaseBrowserClient();
 
@@ -136,7 +136,91 @@ export function useFolders() {
     return null;
   };
 
-  return { folders, loading, createFolder, refresh: fetchFolders };
+  const deleteFolder = async (id: string) => {
+    const { error } = await supabase.from('folders').delete().eq('id', id);
+    if (!error) {
+      setFolders(prev => prev.filter(f => f.id !== id));
+    }
+  };
+
+  const updateFolder = async (id: string, updates: Partial<Folder>) => {
+    const { error } = await supabase.from('folders').update(updates).eq('id', id);
+    if (!error) {
+      setFolders(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+    }
+  };
+
+  return { folders, loading, createFolder, deleteFolder, updateFolder, refresh: fetchFolders };
+}
+
+// ==========================================
+// Files Hook
+// ==========================================
+export function useFiles(folderId?: string) {
+  const [files, setFiles] = useState<FileRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchFiles = useCallback(async () => {
+    if (!folderId) { setFiles([]); setLoading(false); return; }
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('files')
+      .select('*')
+      .eq('folder_id', folderId)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) setFiles(data as FileRecord[]);
+    setLoading(false);
+  }, [folderId]);
+
+  useEffect(() => { fetchFiles(); }, [fetchFiles]);
+
+  const uploadFile = async (file: File, folderId: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder_id', folderId);
+
+    const response = await fetch('/api/files', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (response.ok) {
+      const newFile = await response.json();
+      setFiles(prev => [newFile, ...prev]);
+      return newFile;
+    }
+    return null;
+  };
+
+  const deleteFile = async (id: string) => {
+    const response = await fetch('/api/files', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+
+    if (response.ok) {
+      setFiles(prev => prev.filter(f => f.id !== id));
+    }
+  };
+
+  const processFile = async (fileId: string, action: 'summarize' | 'flashcards' | 'both') => {
+    const response = await fetch('/api/files/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file_id: fileId, action }),
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      await fetchFiles(); // refresh to get updated status
+      return result;
+    }
+    return null;
+  };
+
+  return { files, loading, uploadFile, deleteFile, processFile, refresh: fetchFiles };
 }
 
 // ==========================================

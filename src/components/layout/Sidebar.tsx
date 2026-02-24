@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BrainCircuit, FileText, Layers, Network, LayoutDashboard, Settings, LogOut } from "lucide-react";
+import { BrainCircuit, FileText, Layers, Network, LayoutDashboard, Settings, LogOut, FolderOpen } from "lucide-react";
 import { useUser } from "@/hooks/useSupabase";
 
 const navItems = [
     { href: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/folders', label: 'Pastas', icon: FolderOpen },
     { href: '/documents', label: 'Documentos', icon: FileText },
     { href: '/flashcards', label: 'Flashcards', icon: Layers },
     { href: '/mindmaps', label: 'Mapas Mentais', icon: Network },
